@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Runtime.ConstrainedExecution;
 using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.SocialPlatforms;
 
 public class PlayerController : MonoBehaviour
 {
@@ -31,11 +33,13 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private KeyCode _jumpKey;
     [SerializeField] private float _jumpForce;
     [SerializeField] private float _jumpCooldown;
+    [SerializeField] private float _airMultiplier;
+    [SerializeField] private float _airDrag;
     [SerializeField] private bool _canJump;
 
     [Header("Sliding Settings")]//Kayma
     [SerializeField] private KeyCode _slideKey;
-    [SerializeField] private float _slideMultipiler;//Kayma hıznın çarpılma miktarı çünkü normal hızdan daha hızlı olacak.
+    [SerializeField] private float _slideMultiplier;//Kayma hıznın çarpılma miktarı çünkü normal hızdan daha hızlı olacak.
     [SerializeField] private float _slideDrag;
 
     [Header("Ground Check Settings")]
@@ -43,6 +47,7 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private LayerMask _groundLayer;
     [SerializeField] private float _groundDrag;
 
+    private StateController _stateController;
 
     private Rigidbody _playerRigidbody;
 
@@ -56,6 +61,7 @@ public class PlayerController : MonoBehaviour
 
     private void Awake()
     {
+        _stateController = GetComponent<StateController>();
         _playerRigidbody = GetComponent<Rigidbody>();
         _playerRigidbody.freezeRotation = true;
         //freezeRotation => Rigidbody'nin kendi kendine dönmesini (rotasyon yapmasını) engellemektir.
@@ -67,6 +73,7 @@ public class PlayerController : MonoBehaviour
     private void Update()
     {
         SetInputs();
+        SetStates();
         SetPlayerDrag();
         LimitPlayerSpeed();
     }
@@ -104,6 +111,36 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    private void SetStates()
+    {
+        var movementDirection = GetMovementDirection();
+        var isGrounded = IsGrounded();
+        var isSliding = IsSliding();
+        var currentState = _stateController.GetCurrentState();
+
+        var newState = currentState switch//Switch Expression
+        {
+            _ when movementDirection == Vector3.zero && isGrounded && !_isSliding => PlayerState.Idle,//eğer soldaki koşul sağlanıyorsa => sonrakini döndür.
+            _ when movementDirection != Vector3.zero && isGrounded && !_isSliding => PlayerState.Move,
+            _ when movementDirection != Vector3.zero && isGrounded && _isSliding => PlayerState.Slide,
+            _ when movementDirection == Vector3.zero && isGrounded && _isSliding => PlayerState.SlideIdle,
+            _ when !_canJump && !isGrounded => PlayerState.Jump,
+            _ => currentState,//default durum
+        };
+        //currentState'a bakarak değil, koşullara (movementDirection, isGrounded, _isSliding) göre yeni state belirleniyor.
+        //_(wildcard)    "Değişkenin değerine bakmıyorum" demek. Herhangi bir değer.
+        //when    "Şu koşul doğruysa" diyerek şart eklemek.
+        //=>	"Şu sonucu döndür" anlamına gelir.
+        //default(_ => ...)	Hiçbir koşul tutmazsa varsayılan değeri döndür.
+
+        //!!!pattern when condition => result	Değişkenin kendisi değil, başka bir koşula bakıyorsun
+
+        if (newState != currentState) 
+        { 
+            _stateController.ChangeState(newState);
+            //Eğer yeni belirlenen durum(newState) mevcut durumdan farklıysa, Gerçekten ChangeState() çağırarak durumu güncelliyoruz.
+        }
+    }
     private void SetPlayerMovement()
     {
         _movementDirection = _orientationTransform.forward * _verticalInput + _orientationTransform.right * _horizontalInput;//Tüm yönleri anlayabilmek ve çapraz hareketi desteklemek için topluyoruz.
@@ -113,40 +150,69 @@ public class PlayerController : MonoBehaviour
         //S tuşu (geri tuşu) ➔ _verticalInput = -1 ileri vektörünün tersi yönünde kuvvet uygulanır(yani geriye doğru!).
         //aynı kurallar right için de geçerli.
 
-        if (_isSliding)
+        float forceMultiplier = _stateController.GetCurrentState() switch
         {
-            _playerRigidbody.AddForce(_movementDirection.normalized * _movementSpeed * _slideMultipiler, ForceMode.Force);
-            //Burada ekstra _slideMultipiler ile çarpıyoruz çünkü eğer slide(kayma) işlemi varsa ekstra hızlansın.
-        }
-        else
-        {
-            _playerRigidbody.AddForce(_movementDirection.normalized * _movementSpeed, ForceMode.Force);
-            //Diyelim ki ileri-sağa çapraz gidiyorsun.
-            //Vektörün uzunluğu(magnitude) √2 olurdu → bu da hızın fazla olmasına yol açardı.
-            //Normalize ederek bu uzunluğu 1 birim yapıyorsun ➔ böylece çapraz giderken hızın artmıyor.
+            PlayerState.Move => 1f,
+            PlayerState.Slide => _slideMultiplier,
+            PlayerState.Jump => _airMultiplier,
+            _ => 1f,
+        };
+        //pattern => result	Değişkenin kendisine bakıyorsun.
 
-            //*_movementSpeed:
-            //Normalized vektörü istediğin büyüklükte ölçekliyorsun.
-            //Bu, hareket hızının sabit kalmasını sağlar.
+        //Constant Pattern	Bir sabitle eşleşir. ➔	case 5: ya da 5 => "Beş"
+        //Type Pattern:    Tür kontrolü yapar. ➔ is int i
+        //Var Pattern: Her zaman eşleşir, bir değişkene atar. ➔ var x => x * 2
+        //Discard Pattern: Eşleşir ama değeri kullanmaz(_). ➔	_ => something
+        //Relational Pattern:  Karşılaştırma yapar. ➔ (>, <, >=, <=) >= 90 => "A"
+        //Logical Pattern: Koşulları and, or, not ile birleştirir. ➔ > 0 and < 10 => "küçük sayı"
 
-            //ForceMode.Force:
-            //Sürekli ve kademeli bir kuvvet uygular(F = m * a). (Kütleye göredir.)
-            //Daha doğal bir ivmelenme sağlar.
-        }
+
+        _playerRigidbody.AddForce(_movementDirection.normalized * _movementSpeed * forceMultiplier, ForceMode.Force);
+
+        //ESKİ KODLAR
+        //if (_isSliding)
+        //{
+        //_playerRigidbody.AddForce(_movementDirection.normalized * _movementSpeed * _slideMultiplier, ForceMode.Force);
+        //Burada ekstra _slideMultiplier ile çarpıyoruz çünkü eğer slide(kayma) işlemi varsa ekstra hızlansın.
+        //}
+        //else
+        //{
+        //_playerRigidbody.AddForce(_movementDirection.normalized * _movementSpeed, ForceMode.Force);
+        //Diyelim ki ileri-sağa çapraz gidiyorsun.
+        //Vektörün uzunluğu(magnitude) √2 olurdu → bu da hızın fazla olmasına yol açardı.
+        //Normalize ederek bu uzunluğu 1 birim yapıyorsun ➔ böylece çapraz giderken hızın artmıyor.
+
+        //*_movementSpeed:
+        //Normalized vektörü istediğin büyüklükte ölçekliyorsun.
+        //Bu, hareket hızının sabit kalmasını sağlar.
+
+        //ForceMode.Force:
+        //Sürekli ve kademeli bir kuvvet uygular(F = m * a). (Kütleye göredir.)
+        //Daha doğal bir ivmelenme sağlar.
+        //}
     }
 
     private void SetPlayerDrag()
     {
+        _playerRigidbody.linearDamping = _stateController.GetCurrentState() switch 
+        { 
+            PlayerState.Move =>_groundDrag,
+            PlayerState.Slide =>_slideDrag,
+            PlayerState.Jump =>_airDrag,
+            _ => _playerRigidbody.linearDamping,
+        };
+
+        //ESKİ KODLAR
         //drag nedir?(Sürtünme Kuvveti) Objenin hareket hızına karşı koyan bir yavaşlatıcı kuvvettir.
-        if (_isSliding)
-        {
-            _playerRigidbody.linearDamping = _slideDrag;
-            //linearDamping drag'e karşılık geliyor.
-        }
-        else
-        {
-            _playerRigidbody.linearDamping = _groundDrag;
-        }
+        //if (_isSliding)
+        //{
+            //_playerRigidbody.linearDamping = _slideDrag;
+                //linearDamping drag'e karşılık geliyor.
+        //}
+        //else
+        //{
+            //_playerRigidbody.linearDamping = _groundDrag;
+        //}
 
     }
 
@@ -206,5 +272,15 @@ public class PlayerController : MonoBehaviour
         //Vector3.down(0,-1,0) Işının yönü. (Aşağıya doğru). Tip: Vector3 | direction
         //_playerHeight * 0.5f + 0.2f Işının uzunluğu(mesafesi). (Oyuncunun yarı yüksekliği kadar + küçük bir ek boşluk) Tip: Float | maxDistance
         //_groundLayer Sadece "Ground" katmanına sahip objelere çarpılsın. Tip: int | layerMask (layer mask'ı menüden seçtiğimiz(atadığımız) için key value şeklinde örn: 6. olan ground layer'ı)
+    }
+
+    private Vector3 GetMovementDirection()
+    {
+        return _movementDirection.normalized;
+    }
+
+    private bool IsSliding()
+    {
+        return _isSliding;
     }
 }
