@@ -1379,10 +1379,10 @@ CapsuleCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 0.23
-  m_Height: 0.85
+  m_Radius: 0.2505877
+  m_Height: 0.8761173
   m_Direction: 1
-  m_Center: {x: -0.015, y: -0.04, z: 0}
+  m_Center: {x: 0.005587697, y: -0.053058654, z: 0}
 --- !u!54 &1551690262
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -1423,15 +1423,20 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _orientationTransform: {fileID: 535320536}
-  _movementSpeed: 0
+  _movementKey: 101
+  _movementSpeed: 30
   _jumpKey: 32
   _jumpForce: 5
   _jumpCooldown: 0.5
   _canJump: 1
+  _slideKey: 113
+  _slideMultipiler: 2
+  _slideDrag: 2
   _playerHeight: 1
   _groundLayer:
     serializedVersion: 2
     m_Bits: 64
+  _groundDrag: 5
 --- !u!1 &1661877221
 GameObject:
   m_ObjectHideFlags: 0
