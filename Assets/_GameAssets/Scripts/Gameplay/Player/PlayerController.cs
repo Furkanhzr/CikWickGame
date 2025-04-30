@@ -6,6 +6,8 @@ using UnityEngine.SocialPlatforms;
 
 public class PlayerController : MonoBehaviour
 {
+    public event Action _OnPlayerJumped ;
+
     [Header("References")] //unity üzerinde değişkenleri başlık altına alıyor.
     [SerializeField] private Transform _orientationTransform;
     //Transform, bir objenin konumunu (position), rotasyonunu (rotation) ve ölçeğini (scale) tutar.
@@ -239,6 +241,8 @@ public class PlayerController : MonoBehaviour
 
     private void SetPlayerJumping()
     {
+        _OnPlayerJumped?.Invoke();
+        
         _playerRigidbody.linearVelocity = new Vector3(_playerRigidbody.linearVelocity.x, 0f, _playerRigidbody.linearVelocity.z);
         //velocity(linearVelocity) => Rigidbody'nin o anki hızını verir. Bu bir Vector3 türünde değerdir.
         //velocity = objenin fiziksel mevcut hızıdır.
