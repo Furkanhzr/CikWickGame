@@ -53,6 +53,8 @@ public class PlayerController : MonoBehaviour
 
     private Rigidbody _playerRigidbody;
 
+    private float _startingMovementSpeed, _startingJumpForce;
+
     private float _horizontalInput, _verticalInput;
 
     private Vector3 _movementDirection;
@@ -70,6 +72,8 @@ public class PlayerController : MonoBehaviour
         //Çünkü Rigidbody doğası gereği: Kuvvet uygularsan hareket eder(tamam), Kuvvet dengesiz gelirse döner / yuvarlanır.
         _movementSpeed = 30;
         _canJump = true;
+        _startingMovementSpeed = _movementSpeed;
+        _startingJumpForce = _jumpForce;
     }
 
     private void Update()
@@ -265,6 +269,7 @@ public class PlayerController : MonoBehaviour
         _canJump = true;
     }
 
+    #region Helper Functions
     private bool IsGrounded()
     {
         //Oyuncunun tam ortasından aşağıya bir ışın atıp, belirli bir mesafede yere değip değmediğini kontrol eder ve
@@ -287,4 +292,30 @@ public class PlayerController : MonoBehaviour
     {
         return _isSliding;
     }
+
+    public void SetMovementSpeed(float speed, float duration)
+    {
+        _movementSpeed += speed;
+        Invoke(nameof(ResetMovementSpeed), duration);
+        //ResetMovementSpeed() çağrıldığında, hareket hızını başlangıç değerlerine geri alır.
+    }
+
+    private void ResetMovementSpeed()
+    {
+        _movementSpeed = _startingMovementSpeed;
+    }
+
+    public void SetJumpForce(float force, float duration)
+    {
+        _jumpForce += force;
+        Invoke(nameof(ResetJumpForce), duration);
+    }
+
+    private void ResetJumpForce()
+    {
+        _jumpForce = _startingJumpForce;
+
+    }
+
+    #endregion
 }
