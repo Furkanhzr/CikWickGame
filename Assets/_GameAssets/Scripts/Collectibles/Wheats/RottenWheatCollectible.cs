@@ -1,14 +1,15 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 public class RottenWheatColectible : MonoBehaviour, ICollectible
 {
+    [SerializeField] private WheatDesignSO _wheatDesignSO; // Bu WheatDesignSO scriptable object'i ile bağlantılı olacak.
+
     [SerializeField] private PlayerController _playerController;
-    [SerializeField] private float _movementDecraseSpeed;
-    [SerializeField] private float _restBoostDuration;
+
 
     public void Collect()
     {
-        _playerController.SetMovementSpeed(_movementDecraseSpeed, _restBoostDuration);
+        _playerController.SetMovementSpeed(_wheatDesignSO.IncreaseDecreaseMultiplier, _wheatDesignSO.ResetBoostDuration);
         Destroy(this.gameObject);
     }
 }

@@ -2,13 +2,13 @@
 
 public class HolyWheatCollectible : MonoBehaviour, ICollectible
 {
+    [SerializeField] private WheatDesignSO _wheatDesignSO; // Bu WheatDesignSO scriptable object'i ile bağlantılı olacak.
+
     [SerializeField] private PlayerController _playerController;
-    [SerializeField] private float _forceIncrease;
-    [SerializeField] private float _restBoostDuration;
 
     public void Collect()
     {
-        _playerController.SetJumpForce(_forceIncrease, _restBoostDuration);
+        _playerController.SetJumpForce(_wheatDesignSO.IncreaseDecreaseMultiplier, _wheatDesignSO.ResetBoostDuration);
         Destroy(this.gameObject);
     }
 }
