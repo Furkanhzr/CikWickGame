@@ -317,5 +317,10 @@ public class PlayerController : MonoBehaviour
 
     }
 
+    public Rigidbody GetPlayerRigidbody()
+    {
+        return _playerRigidbody;
+    }
+
     #endregion
 }
