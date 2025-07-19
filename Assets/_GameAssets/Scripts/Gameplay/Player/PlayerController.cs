@@ -6,7 +6,8 @@ using UnityEngine.SocialPlatforms;
 
 public class PlayerController : MonoBehaviour
 {
-    public event Action _OnPlayerJumped ;
+    public event Action _OnPlayerJumped;
+    public event Action<PlayerState> OnPlayerStateChanged;
 
     [Header("References")] //unity üzerinde değişkenleri başlık altına alıyor.
     [SerializeField] private Transform _orientationTransform;
@@ -145,6 +146,7 @@ public class PlayerController : MonoBehaviour
         { 
             _stateController.ChangeState(newState);
             //Eğer yeni belirlenen durum(newState) mevcut durumdan farklıysa, Gerçekten ChangeState() çağırarak durumu güncelliyoruz.
+            OnPlayerStateChanged?.Invoke(newState);
         }
     }
     private void SetPlayerMovement()
